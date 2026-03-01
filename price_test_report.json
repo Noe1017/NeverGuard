@@ -1,0 +1,177 @@
+{
+  "timestamp": "2026-03-01T10:40:47.377Z",
+  "summary": {
+    "total": 34,
+    "successful": 30,
+    "failed": 4,
+    "successRate": 0.8823529411764706
+  },
+  "successful": [
+    {
+      "id": "bitcoin",
+      "price": 66553,
+      "change24h": 4.056168973794449
+    },
+    {
+      "id": "ethereum",
+      "price": 1985.84,
+      "change24h": 6.5211440959846305
+    },
+    {
+      "id": "matic-network"
+    },
+    {
+      "id": "arbitrum",
+      "price": 0.100405,
+      "change24h": 8.187972642506505
+    },
+    {
+      "id": "optimism",
+      "price": 0.123463,
+      "change24h": 11.476958602590877
+    },
+    {
+      "id": "base",
+      "price": 0.00000122,
+      "change24h": -8.48594952390281
+    },
+    {
+      "id": "rocket-pool-eth",
+      "price": 2306.39,
+      "change24h": 6.785531635226741
+    },
+    {
+      "id": "staked-ether",
+      "price": 1983.78,
+      "change24h": 6.520218684479727
+    },
+    {
+      "id": "wrapped-steth",
+      "price": 2440.47,
+      "change24h": 6.708840298402063
+    },
+    {
+      "id": "frax-ether",
+      "price": 1977.98,
+      "change24h": 6.612964116158829
+    },
+    {
+      "id": "coinbase-wrapped-staked-eth",
+      "price": 2234.65,
+      "change24h": 6.704851132078452
+    },
+    {
+      "id": "monad",
+      "price": 0.02150771,
+      "change24h": 9.042437563158588
+    },
+    {
+      "id": "tether",
+      "price": 1,
+      "change24h": -0.005066547761626106
+    },
+    {
+      "id": "usd-coin",
+      "price": 0.999807,
+      "change24h": -0.019268854003506777
+    },
+    {
+      "id": "dai",
+      "price": 0.999681,
+      "change24h": -0.03076733147395342
+    },
+    {
+      "id": "frax",
+      "price": 0.990061,
+      "change24h": 0.2416795977262037
+    },
+    {
+      "id": "true-usd",
+      "price": 0.9991,
+      "change24h": 0.040829316493046136
+    },
+    {
+      "id": "binance-usd",
+      "price": 0.996204,
+      "change24h": -0.04656915379455468
+    },
+    {
+      "id": "uniswap",
+      "price": 3.78,
+      "change24h": 6.190935253861899
+    },
+    {
+      "id": "aave",
+      "price": 113.29,
+      "change24h": 6.740561959907494
+    },
+    {
+      "id": "maker",
+      "price": 1622.29,
+      "change24h": 5.396912288539526
+    },
+    {
+      "id": "curve-dao-token",
+      "price": 0.247034,
+      "change24h": 6.862139094297602
+    },
+    {
+      "id": "compound-governance-token",
+      "price": 17.97,
+      "change24h": 3.1556659856015945
+    },
+    {
+      "id": "lido-dao",
+      "price": 0.303727,
+      "change24h": 6.396367851455498
+    },
+    {
+      "id": "puffer-finance",
+      "price": 0.02963337,
+      "change24h": 5.969690717177548
+    },
+    {
+      "id": "ether-fi",
+      "price": 0.50296,
+      "change24h": 6.493902415198689
+    },
+    {
+      "id": "renzo",
+      "price": 0.00283804,
+      "change24h": 6.178857403159565
+    },
+    {
+      "id": "compound-usd-coin",
+      "price": 0.02531183,
+      "change24h": -0.04503839425656188
+    },
+    {
+      "id": "compound-ether",
+      "price": 40,
+      "change24h": 6.763072047370594
+    },
+    {
+      "id": "aave-usdc",
+      "price": 0.998793,
+      "change24h": 0.10570528039233983
+    }
+  ],
+  "failed": [
+    {
+      "id": "pyusd",
+      "error": "Not found in response"
+    },
+    {
+      "id": "synthetix-network-token",
+      "error": "Not found in response"
+    },
+    {
+      "id": "eigen-layer",
+      "error": "Not found in response"
+    },
+    {
+      "id": "karak-network",
+      "error": "Not found in response"
+    }
+  ]
+}
