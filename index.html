@@ -569,7 +569,7 @@
         .strategy-result-value {
             margin-top: 3px;
             font-family: 'Manrope', sans-serif;
-            font-size: 18px;
+            font-size: 24px;
             font-weight: 700;
             color: var(--text);
         }
@@ -581,8 +581,104 @@
             color: var(--text-dim);
         }
 
+        .strategy-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .strategy-detail-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 8px 10px;
+        }
+
+        .strategy-detail-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: var(--text-dim);
+        }
+
+        .strategy-detail-value {
+            margin-top: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .strategy-assumptions {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.08);
+            display: grid;
+            gap: 6px;
+        }
+
+        .strategy-assumption-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--text-dim);
+        }
+
+        .strategy-assumption-value {
+            color: var(--text);
+            text-align: right;
+        }
+
+        .strategy-journey {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            background: rgba(243, 201, 106, 0.06);
+            border: 1px solid rgba(243, 201, 106, 0.16);
+            border-radius: 10px;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .strategy-journey-step {
+            display: grid;
+            gap: 3px;
+            min-width: 0;
+        }
+
+        .strategy-journey-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: var(--text-dim);
+        }
+
+        .strategy-journey-value {
+            font-size: 13px;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .strategy-journey-arrow {
+            color: var(--primary);
+            font-size: 18px;
+            flex: 0 0 auto;
+        }
+
         @media (max-width: 1100px) {
             .strategy-core-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .strategy-detail-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -1562,10 +1658,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="strategy-field">
-                                    <label for="noLevSupplyApyInput">Neverland Supply APY (%)</label>
-                                    <input id="noLevSupplyApyInput" type="number" min="0" step="0.01" value="0" />
-                                </div>
                                 <div class="strategy-core-meta">
                                     <div class="strategy-core-meta-item">
                                         <div class="strategy-core-meta-label">Risk</div>
@@ -1577,9 +1669,54 @@
                                     </div>
                                 </div>
                                 <div class="strategy-result">
-                                    <div class="strategy-result-label">Estimated 1Y Earnings</div>
+                                    <div class="strategy-result-label">Principal After 1 Year</div>
                                     <div class="strategy-result-value" id="noLevResultValue">--</div>
                                     <div class="strategy-inline-note" id="noLevResultNote">Waiting for live rates...</div>
+                                </div>
+                                <div class="strategy-journey">
+                                    <div class="strategy-journey-step">
+                                        <div class="strategy-journey-label">Start</div>
+                                        <div class="strategy-journey-value" id="noLevStartValue">--</div>
+                                    </div>
+                                    <div class="strategy-journey-arrow">→</div>
+                                    <div class="strategy-journey-step">
+                                        <div class="strategy-journey-label">After 1Y</div>
+                                        <div class="strategy-journey-value" id="noLevJourneyEndingValue">--</div>
+                                    </div>
+                                </div>
+                                <div class="strategy-detail-grid">
+                                    <div class="strategy-detail-item">
+                                        <div class="strategy-detail-label">Principal Yield</div>
+                                        <div class="strategy-detail-value" id="noLevEarningsValue">--</div>
+                                    </div>
+                                    <div class="strategy-detail-item">
+                                        <div class="strategy-detail-label">Estimated DUST Rewards</div>
+                                        <div class="strategy-detail-value" id="noLevDustRewardsValue">--</div>
+                                    </div>
+                                </div>
+                                <div class="strategy-detail-grid">
+                                    <div class="strategy-detail-item">
+                                        <div class="strategy-detail-label">Lock DUST for USDC Rewards</div>
+                                        <div class="strategy-detail-value" id="noLevBoostValue">Convert DUST into veDUST to qualify</div>
+                                    </div>
+                                    <div class="strategy-detail-item">
+                                        <div class="strategy-detail-label">Reward Model</div>
+                                        <div class="strategy-detail-value" id="noLevModelValue">1Y simple yield</div>
+                                    </div>
+                                </div>
+                                <div class="strategy-assumptions">
+                                    <div class="strategy-assumption-row">
+                                        <span>shMON APY</span>
+                                        <span class="strategy-assumption-value" id="noLevShmonApyValue">--</span>
+                                    </div>
+                                    <div class="strategy-assumption-row">
+                                        <span>Neverland Base APY</span>
+                                        <span class="strategy-assumption-value" id="noLevSupplyApyValue">--</span>
+                                    </div>
+                                    <div class="strategy-assumption-row">
+                                        <span>MON Price</span>
+                                        <span class="strategy-assumption-value" id="noLevMonPriceValue">--</span>
+                                    </div>
                                 </div>
                                 <div class="strategy-core-footer" id="noLevApyBreakdown">No leverage / 1-year estimate / live-updating</div>
                             </article>
@@ -1589,18 +1726,23 @@
                                     <div class="strategy-core-name">Leverage Strategy</div>
                                     <span class="strategy-core-badge mid">1.5x</span>
                                 </div>
-                                <p class="strategy-core-desc">Medium leverage strategy block. Entry conditions, risk thresholds and rebalance rules coming next.</p>
+                                <p class="strategy-core-desc">Leverage shMON position with moderate borrow cost and conservative risk reserve. Net return is after borrow and reserve deductions.</p>
                                 <div class="strategy-core-meta">
                                     <div class="strategy-core-meta-item">
                                         <div class="strategy-core-meta-label">Risk</div>
                                         <div class="strategy-core-meta-value">Medium</div>
                                     </div>
                                     <div class="strategy-core-meta-item">
-                                        <div class="strategy-core-meta-label">Status</div>
-                                        <div class="strategy-core-meta-value">Draft</div>
+                                        <div class="strategy-core-meta-label">Net APY</div>
+                                        <div class="strategy-core-meta-value" id="midLevApyValue">--</div>
                                     </div>
                                 </div>
-                                <div class="strategy-core-footer">Placeholder - content to be defined</div>
+                                <div class="strategy-result">
+                                    <div class="strategy-result-label">Estimated 1Y Net Earnings</div>
+                                    <div class="strategy-result-value" id="midLevResultValue">--</div>
+                                    <div class="strategy-inline-note" id="midLevResultNote">Waiting for live rates...</div>
+                                </div>
+                                <div class="strategy-core-footer" id="midLevFooter">1.5x leverage / net of borrow costs</div>
                             </article>
 
                             <article class="strategy-core-card high">
@@ -1608,18 +1750,23 @@
                                     <div class="strategy-core-name">Leverage Strategy</div>
                                     <span class="strategy-core-badge high">1.8x</span>
                                 </div>
-                                <p class="strategy-core-desc">High leverage strategy block. Protection logic, stop rules and liquidation alerts coming next.</p>
+                                <p class="strategy-core-desc">Higher leverage for aggressive return targets with larger borrow drag and wider risk reserve assumptions.</p>
                                 <div class="strategy-core-meta">
                                     <div class="strategy-core-meta-item">
                                         <div class="strategy-core-meta-label">Risk</div>
                                         <div class="strategy-core-meta-value">High</div>
                                     </div>
                                     <div class="strategy-core-meta-item">
-                                        <div class="strategy-core-meta-label">Status</div>
-                                        <div class="strategy-core-meta-value">Draft</div>
+                                        <div class="strategy-core-meta-label">Net APY</div>
+                                        <div class="strategy-core-meta-value" id="highLevApyValue">--</div>
                                     </div>
                                 </div>
-                                <div class="strategy-core-footer">Placeholder - content to be defined</div>
+                                <div class="strategy-result">
+                                    <div class="strategy-result-label">Estimated 1Y Net Earnings</div>
+                                    <div class="strategy-result-value" id="highLevResultValue">--</div>
+                                    <div class="strategy-inline-note" id="highLevResultNote">Waiting for live rates...</div>
+                                </div>
+                                <div class="strategy-core-footer" id="highLevFooter">1.8x leverage / higher liquidation sensitivity</div>
                             </article>
                         </div>
                     </section>
@@ -1841,8 +1988,24 @@
         const noLevResultValue = document.getElementById('noLevResultValue');
         const noLevResultNote = document.getElementById('noLevResultNote');
         const noLevApyValue = document.getElementById('noLevApyValue');
-        const noLevSupplyApyInput = document.getElementById('noLevSupplyApyInput');
+        const noLevStartValue = document.getElementById('noLevStartValue');
+        const noLevJourneyEndingValue = document.getElementById('noLevJourneyEndingValue');
+        const noLevEarningsValue = document.getElementById('noLevEarningsValue');
+        const noLevDustRewardsValue = document.getElementById('noLevDustRewardsValue');
+        const noLevBoostValue = document.getElementById('noLevBoostValue');
+        const noLevShmonApyValue = document.getElementById('noLevShmonApyValue');
+        const noLevSupplyApyValue = document.getElementById('noLevSupplyApyValue');
+        const noLevMonPriceValue = document.getElementById('noLevMonPriceValue');
+        const noLevModelValue = document.getElementById('noLevModelValue');
         const noLevApyBreakdown = document.getElementById('noLevApyBreakdown');
+        const midLevApyValue = document.getElementById('midLevApyValue');
+        const midLevResultValue = document.getElementById('midLevResultValue');
+        const midLevResultNote = document.getElementById('midLevResultNote');
+        const midLevFooter = document.getElementById('midLevFooter');
+        const highLevApyValue = document.getElementById('highLevApyValue');
+        const highLevResultValue = document.getElementById('highLevResultValue');
+        const highLevResultNote = document.getElementById('highLevResultNote');
+        const highLevFooter = document.getElementById('highLevFooter');
         let noLevSelectedToken = 'MON';
         let noLevSelectedResultUnit = 'MON';
         const tokenIconMap = {
@@ -2030,42 +2193,122 @@
             }
         }
 
-        function updateNoLeverageEstimator() {
+        function formatResultValue(value, unit) {
+            if (!Number.isFinite(value)) return '--';
+            if (unit === 'USDC') {
+                return `$${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+            }
+            return `${value.toLocaleString('en-US', { maximumFractionDigits: 4 })} MON`;
+        }
+
+        function resetNoLeverageDisplay(noteText) {
+            noLevResultValue.textContent = '--';
+            noLevResultNote.textContent = noteText;
+            noLevStartValue.textContent = '--';
+            noLevJourneyEndingValue.textContent = '--';
+            noLevEarningsValue.textContent = '--';
+            noLevDustRewardsValue.textContent = '--';
+            noLevBoostValue.textContent = 'Convert DUST into veDUST to qualify';
+            noLevShmonApyValue.textContent = '--';
+            noLevSupplyApyValue.textContent = '--';
+            noLevMonPriceValue.textContent = '--';
+            if (noLevModelValue) {
+                noLevModelValue.textContent = '1Y simple yield';
+            }
+        }
+
+        async function updateStrategyEstimator() {
             const inputAmount = Math.max(parseFloat(noLevAmountInput?.value || '0') || 0, 0);
             const resultUnit = noLevSelectedResultUnit || 'MON';
-            const neverlandSupplyApy = Math.max(parseFloat(noLevSupplyApyInput?.value || '0') || 0, 0);
-            const combinedApy = ((1 + (shmonBaseApy / 100)) * (1 + (neverlandSupplyApy / 100)) - 1) * 100;
-            strategyApy = combinedApy;
 
-            noLevApyValue.textContent = strategyApy > 0 ? `${strategyApy.toFixed(2)}%` : '--';
-            if (noLevApyBreakdown) {
-                noLevApyBreakdown.textContent =
-                    `APY breakdown: shMON ${shmonBaseApy.toFixed(2)}% + Neverland ${neverlandSupplyApy.toFixed(2)}% => Combined ${combinedApy.toFixed(2)}%`;
-            }
-
-            if (monPriceUsd <= 0 || strategyApy <= 0) {
-                noLevResultValue.textContent = '--';
-                noLevResultNote.textContent = 'Waiting for valid APY and MON price...';
+            if (monPriceUsd <= 0) {
+                resetNoLeverageDisplay('Waiting for MON price...');
+                midLevResultValue.textContent = '--';
+                midLevResultNote.textContent = 'Waiting for MON price...';
+                highLevResultValue.textContent = '--';
+                highLevResultNote.textContent = 'Waiting for MON price...';
                 return;
             }
 
-            // Convert selected token input to MON base.
-            const principalMon = noLevSelectedToken === 'USDC'
-                ? (inputAmount / monPriceUsd)
-                : inputAmount;
+            const params = new URLSearchParams({
+                amount: inputAmount.toString(),
+                inputUnit: noLevSelectedToken,
+                resultUnit,
+                baseApy: shmonBaseApy.toString(),
+                monPriceUsd: monPriceUsd.toString()
+            });
 
-            // 1-year simple estimate for current strategy stage.
-            const earningsMon = principalMon * (strategyApy / 100);
-            const earningsUsdc = earningsMon * monPriceUsd;
+            try {
+                const response = await fetch(`/api/strategy/staking/quote?${params.toString()}`);
+                const result = await response.json();
+                if (!result.success || !result.data?.strategies) {
+                    throw new Error(result.error || 'Strategy API unavailable');
+                }
 
-            if (resultUnit === 'USDC') {
-                noLevResultValue.textContent = `$${earningsUsdc.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
-            } else {
-                noLevResultValue.textContent = `${earningsMon.toLocaleString('en-US', { maximumFractionDigits: 4 })} MON`;
+                const noLev = result.data.strategies.no_leverage;
+                const midLev = result.data.strategies.leverage_1_5x;
+                const highLev = result.data.strategies.leverage_1_8x;
+                const neverlandSupply = result.data.market?.neverlandSupply || null;
+                const neverlandBaseApy = result.data.market?.sameAssetSupplyApyPct || 0;
+                const dustIncentiveApy = result.data.market?.dustIncentiveApyPct || 0;
+                strategyApy = noLev?.netApyPct || 0;
+
+                noLevApyValue.textContent = Number.isFinite(noLev?.netApyPct) ? `${noLev.netApyPct.toFixed(2)}%` : '--';
+                if (noLevApyBreakdown) {
+                    noLevApyBreakdown.textContent =
+                        `Principal path: shMON ${shmonBaseApy.toFixed(2)}% + Neverland base ${neverlandBaseApy.toFixed(2)}% => ${(result.data.market?.principalGrowthApyPct || 0).toFixed(2)}%`;
+                }
+                const principalMon = result.data.input?.principalMon || 0;
+                const principalInResultUnit = resultUnit === 'USDC'
+                    ? principalMon * monPriceUsd
+                    : principalMon;
+                noLevResultValue.textContent = formatResultValue(noLev?.display?.endingBalance, resultUnit);
+                noLevStartValue.textContent = formatResultValue(principalInResultUnit, resultUnit);
+                noLevJourneyEndingValue.textContent = formatResultValue(noLev?.display?.endingBalance, resultUnit);
+                noLevEarningsValue.textContent = formatResultValue(noLev?.display?.earnings, resultUnit);
+                noLevDustRewardsValue.textContent = noLev?.rewards?.dust
+                    ? `${(noLev.rewards.dust.estimatedAmount || 0).toLocaleString('en-US', { maximumFractionDigits: 4 })} DUST (~$${(noLev.rewards.dust.estimatedUsd || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })})`
+                    : '--';
+                noLevBoostValue.textContent = 'Lock DUST -> receive veDUST -> earn USDC rewards';
+                noLevShmonApyValue.textContent = `${shmonBaseApy.toFixed(2)}%`;
+                noLevSupplyApyValue.textContent = `${neverlandBaseApy.toFixed(2)}%`;
+                noLevMonPriceValue.textContent = `$${monPriceUsd.toFixed(4)}`;
+                if (noLevModelValue) {
+                    noLevModelValue.textContent = 'principal and reward legs separated';
+                }
+                noLevResultNote.textContent =
+                    `Principal only: start with ${inputAmount.toLocaleString('en-US')} ${noLevSelectedToken} -> ${formatResultValue(noLev?.display?.endingBalance, resultUnit)} after 1 year. DUST is shown separately.`;
+
+                if (dustIncentiveApy > 0 && noLevApyBreakdown) {
+                    noLevApyBreakdown.textContent =
+                        `Principal path: shMON ${shmonBaseApy.toFixed(2)}% + Neverland base ${neverlandBaseApy.toFixed(2)}% => ${(result.data.market?.principalGrowthApyPct || 0).toFixed(2)}% • Separate DUST APR ${dustIncentiveApy.toFixed(2)}%`;
+                }
+
+                midLevApyValue.textContent = Number.isFinite(midLev?.netApyPct) ? `${midLev.netApyPct.toFixed(2)}%` : '--';
+                midLevResultValue.textContent = formatResultValue(midLev?.display?.earnings, resultUnit);
+                midLevResultNote.textContent =
+                    `Borrow APY ${(midLev?.assumptions?.borrowApyPct || 0).toFixed(2)}% • Risk reserve ${((midLev?.assumptions?.riskReserveBps || 0) / 100).toFixed(2)}%.`;
+                if (midLevFooter) {
+                    midLevFooter.textContent =
+                        `Gross APY ${(midLev?.grossApyPct || 0).toFixed(2)}% -> Net APY ${(midLev?.netApyPct || 0).toFixed(2)}%`;
+                }
+
+                highLevApyValue.textContent = Number.isFinite(highLev?.netApyPct) ? `${highLev.netApyPct.toFixed(2)}%` : '--';
+                highLevResultValue.textContent = formatResultValue(highLev?.display?.earnings, resultUnit);
+                highLevResultNote.textContent =
+                    `Borrow APY ${(highLev?.assumptions?.borrowApyPct || 0).toFixed(2)}% • Risk reserve ${((highLev?.assumptions?.riskReserveBps || 0) / 100).toFixed(2)}%.`;
+                if (highLevFooter) {
+                    highLevFooter.textContent =
+                        `Gross APY ${(highLev?.grossApyPct || 0).toFixed(2)}% -> Net APY ${(highLev?.netApyPct || 0).toFixed(2)}%`;
+                }
+            } catch (error) {
+                console.error('Error updating strategy estimator:', error);
+                resetNoLeverageDisplay('Strategy quote API unavailable.');
+                midLevResultValue.textContent = '--';
+                midLevResultNote.textContent = 'Strategy quote API unavailable.';
+                highLevResultValue.textContent = '--';
+                highLevResultNote.textContent = 'Strategy quote API unavailable.';
             }
-
-            noLevResultNote.textContent =
-                `Input: ${inputAmount.toLocaleString('en-US')} ${noLevSelectedToken} • Live APY ${strategyApy.toFixed(2)}% • MON $${monPriceUsd.toFixed(4)}.`;
         }
 
         function updateNoLevTokenIcons() {
@@ -2134,7 +2377,7 @@
                 monPriceUsd = featuredData.monPriceUsd;
             }
 
-            updateNoLeverageEstimator();
+            updateStrategyEstimator();
 
             // Update chart
             updateChart(defiData?.apy || 12.2);
@@ -2265,24 +2508,24 @@
             initChart();
             fetchAllData();
             startCountdown();
-            updateNoLeverageEstimator();
+            updateStrategyEstimator();
             updateNoLevTokenIcons();
 
             noLevInputToken?.addEventListener('change', () => {
                 noLevSelectedToken = noLevInputToken.value || 'MON';
                 updateNoLevTokenIcons();
-                updateNoLeverageEstimator();
+                updateStrategyEstimator();
             });
 
             noLevResultUnit?.addEventListener('change', () => {
                 noLevSelectedResultUnit = noLevResultUnit.value || 'MON';
                 updateNoLevTokenIcons();
-                updateNoLeverageEstimator();
+                updateStrategyEstimator();
             });
 
-            [noLevAmountInput, noLevInputToken, noLevResultUnit, noLevSupplyApyInput].forEach((el) => {
-                el?.addEventListener('input', updateNoLeverageEstimator);
-                el?.addEventListener('change', updateNoLeverageEstimator);
+            [noLevAmountInput, noLevInputToken, noLevResultUnit].forEach((el) => {
+                el?.addEventListener('input', updateStrategyEstimator);
+                el?.addEventListener('change', updateStrategyEstimator);
             });
 
             // Toggle switch event listener

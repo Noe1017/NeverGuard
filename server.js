@@ -18,6 +18,11 @@ const PORT = 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(__dirname));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // ==================== CoinGecko API 配置 ====================
 
@@ -234,6 +239,10 @@ const MONAD_RPC = "https://rpc.monad.xyz";
 // shMonad 合约地址
 const SHMONAD_ADDRESS = "0x1b68626dca36c7fe922fd2d55e4f631d962de19c";
 const DUST_TOKEN_ADDRESS = "0xad96c3dffcd6374294e2573a7fbba96097cc8d7c";
+const NSHMON_ADDRESS = "0x38648958836eA88b368b4ac23b86Ad44B0fe7508";
+const NEVERLAND_POOL_ADDRESSES_PROVIDER = "0x49D75170F55C964dfdd6726c74fdEDEe75553A0f";
+const NEVERLAND_UI_POOL_DATA_PROVIDER = "0x0733e79171dd5A5E8aF41E387c6299bCfE6a7e55";
+const NEVERLAND_REWARDS_CONTROLLER = "0x57ea245cCbFAb074baBb9d01d1F0c60525E52cec";
 const SHMON_ICON_URL = "https://shmonad.xyz/favicon.ico";
 const BTC_ICON_URL = "https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png?1696501400";
 const MON_ICON_URL = "https://coin-images.coingecko.com/coins/images/38927/large/mon.png?1766029057";
@@ -248,6 +257,12 @@ const exchangeRateLastKnown = {
     rate: '1.0',
     method: 'default',
     timestamp: 0
+};
+
+const neverlandSupplyApyCache = {
+    data: null,
+    timestamp: 0,
+    ttl: 30000
 };
 
 // shMonad 合约 ABI (极简版，只包含需要的函数)
@@ -265,15 +280,42 @@ const SHMONAD_ABI = [
     "function decimals() external view returns (uint8)"
 ];
 
+const ERC20_METADATA_ABI = [
+    "function totalSupply() external view returns (uint256)",
+    "function decimals() external view returns (uint8)"
+];
+
+const NEVERLAND_REWARDS_CONTROLLER_ABI = [
+    "function getRewardsData(address asset, address reward) external view returns (uint256,uint256,uint256,uint256)"
+];
+
+const NEVERLAND_UI_POOL_DATA_PROVIDER_ABI = [
+    "function getReservesData(address provider) external view returns ((address underlyingAsset,string name,string symbol,uint256 decimals,uint256 baseLTVasCollateral,uint256 reserveLiquidationThreshold,uint256 reserveLiquidationBonus,uint256 reserveFactor,bool usageAsCollateralEnabled,bool borrowingEnabled,bool stableBorrowRateEnabled,bool isActive,bool isFrozen,uint128 liquidityIndex,uint128 variableBorrowIndex,uint128 liquidityRate,uint128 variableBorrowRate,uint128 stableBorrowRate,uint40 lastUpdateTimestamp,address aTokenAddress,address stableDebtTokenAddress,address variableDebtTokenAddress,address interestRateStrategyAddress,uint256 availableLiquidity,uint256 totalPrincipalStableDebt,uint256 averageStableRate,uint256 stableDebtLastUpdateTimestamp,uint256 totalScaledVariableDebt,uint256 priceInMarketReferenceCurrency,address priceOracle,uint256 variableRateSlope1,uint256 variableRateSlope2,uint256 stableRateSlope1,uint256 stableRateSlope2,uint256 baseStableBorrowRate,uint256 baseVariableBorrowRate,uint256 optimalUsageRatio,bool isPaused,bool isSiloedBorrowing,uint128 accruedToTreasury,uint128 unbacked,uint128 isolationModeTotalDebt)[],(uint256,uint256,int256,int256,uint8))"
+];
+
 // ==================== 初始化 ====================
 
 let provider;
 let shmonadContract;
+let neverlandRewardsContract;
+let neverlandUiPoolDataProvider;
+let nshmonContract;
 
 function initContract() {
     try {
         provider = new ethers.JsonRpcProvider(MONAD_RPC);
         shmonadContract = new ethers.Contract(SHMONAD_ADDRESS, SHMONAD_ABI, provider);
+        neverlandRewardsContract = new ethers.Contract(
+            NEVERLAND_REWARDS_CONTROLLER,
+            NEVERLAND_REWARDS_CONTROLLER_ABI,
+            provider
+        );
+        neverlandUiPoolDataProvider = new ethers.Contract(
+            NEVERLAND_UI_POOL_DATA_PROVIDER,
+            NEVERLAND_UI_POOL_DATA_PROVIDER_ABI,
+            provider
+        );
+        nshmonContract = new ethers.Contract(NSHMON_ADDRESS, ERC20_METADATA_ABI, provider);
         console.log(`✅ Connected to Monad RPC: ${MONAD_RPC}`);
         console.log(`✅ shMonad Contract: ${SHMONAD_ADDRESS}`);
         return true;
@@ -376,6 +418,185 @@ async function getStakingRate() {
         rate: stakingRate.toString(),
         method: data.method + '_inverted',
         timestamp: data.timestamp
+    };
+}
+
+const STRATEGY_PROFILES = {
+    no_leverage: {
+        id: 'no_leverage',
+        name: 'No Leverage',
+        leverage: 1.0,
+        borrowApy: 0,
+        riskReserveBps: 0,
+        risk: 'low'
+    },
+    leverage_1_5x: {
+        id: 'leverage_1_5x',
+        name: 'Leverage 1.5x',
+        leverage: 1.5,
+        borrowApy: 8.0,
+        riskReserveBps: 40,
+        risk: 'medium'
+    },
+    leverage_1_8x: {
+        id: 'leverage_1_8x',
+        name: 'Leverage 1.8x',
+        leverage: 1.8,
+        borrowApy: 11.0,
+        riskReserveBps: 80,
+        risk: 'high'
+    }
+};
+
+function safeNumber(value, fallback = 0) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return parsed;
+}
+
+function clampNumber(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+}
+
+function round(value, decimals = 6) {
+    const factor = 10 ** decimals;
+    return Math.round(value * factor) / factor;
+}
+
+async function getNeverlandShmonSupplyApy() {
+    const now = Date.now();
+    if (neverlandSupplyApyCache.data && (now - neverlandSupplyApyCache.timestamp) < neverlandSupplyApyCache.ttl) {
+        return neverlandSupplyApyCache.data;
+    }
+
+    const [reserveResult, rewardsData, nshmonDecimals, nshmonSupplyRaw, dustPriceResult] = await Promise.all([
+        neverlandUiPoolDataProvider.getReservesData(NEVERLAND_POOL_ADDRESSES_PROVIDER),
+        neverlandRewardsContract.getRewardsData(NSHMON_ADDRESS, DUST_TOKEN_ADDRESS),
+        nshmonContract.decimals(),
+        nshmonContract.totalSupply(),
+        getDexScreenerPriceByTokenAddress(DUST_TOKEN_ADDRESS)
+    ]);
+
+    const [reserves, baseCurrencyInfo] = reserveResult;
+    const shmonReserve = reserves.find((reserve) =>
+        reserve.underlyingAsset?.toLowerCase() === SHMONAD_ADDRESS.toLowerCase()
+    );
+
+    if (!shmonReserve) {
+        throw new Error('shMON reserve not found in Neverland');
+    }
+
+    const marketReferenceCurrencyUnit = safeNumber(baseCurrencyInfo?.[0]?.toString(), 0);
+    const marketReferenceCurrencyPriceInUsd = safeNumber(baseCurrencyInfo?.[1]?.toString(), 0) / 1e8;
+    const shmonPriceInReference = safeNumber(shmonReserve.priceInMarketReferenceCurrency?.toString(), 0);
+    const shmonPriceUsd = marketReferenceCurrencyUnit > 0
+        ? (shmonPriceInReference / marketReferenceCurrencyUnit) * marketReferenceCurrencyPriceInUsd
+        : 0;
+
+    const baseSupplyApyPct = safeNumber(ethers.formatUnits(shmonReserve.liquidityRate || 0, 25), 0);
+    const emissionPerSecond = safeNumber(ethers.formatUnits(rewardsData?.[1] || 0, 18), 0);
+    const distributionEnd = safeNumber(rewardsData?.[3]?.toString(), 0);
+    const dustPriceUsd = safeNumber(dustPriceResult?.data?.price, 0);
+    const nshmonSupply = safeNumber(ethers.formatUnits(nshmonSupplyRaw || 0, Number(nshmonDecimals || 18)), 0);
+
+    let incentiveApyPct = 0;
+    if (distributionEnd > Math.floor(now / 1000) && emissionPerSecond > 0 && dustPriceUsd > 0 && nshmonSupply > 0 && shmonPriceUsd > 0) {
+        const annualRewardsUsd = emissionPerSecond * 31536000 * dustPriceUsd;
+        const totalSuppliedUsd = nshmonSupply * shmonPriceUsd;
+        incentiveApyPct = totalSuppliedUsd > 0 ? (annualRewardsUsd / totalSuppliedUsd) * 100 : 0;
+    }
+
+    const result = {
+        totalApyPct: round(baseSupplyApyPct + incentiveApyPct, 4),
+        baseSupplyApyPct: round(baseSupplyApyPct, 4),
+        dustIncentiveApyPct: round(incentiveApyPct, 4),
+        emissionPerSecond: round(emissionPerSecond, 8),
+        distributionEnd,
+        nshmonSupply: round(nshmonSupply, 4),
+        shmonPriceUsd: round(shmonPriceUsd, 6),
+        dustPriceUsd: round(dustPriceUsd, 6),
+        source: {
+            reserveProvider: NEVERLAND_UI_POOL_DATA_PROVIDER,
+            rewardsController: NEVERLAND_REWARDS_CONTROLLER,
+            rewardToken: DUST_TOKEN_ADDRESS,
+            asset: NSHMON_ADDRESS
+        }
+    };
+
+    neverlandSupplyApyCache.data = result;
+    neverlandSupplyApyCache.timestamp = now;
+    return result;
+}
+
+function calculateSingleStrategyQuote({
+    principalMon,
+    monPriceUsd,
+    shmonToMon,
+    principalGrowthApyPct,
+    resultUnit,
+    profile,
+    rewardContext = null
+}) {
+    const leveragedExposureMon = principalMon * profile.leverage;
+    const grossEarningsMon = leveragedExposureMon * (principalGrowthApyPct / 100);
+    const borrowedPrincipalMon = principalMon * Math.max(profile.leverage - 1, 0);
+    const borrowCostMon = borrowedPrincipalMon * (profile.borrowApy / 100);
+    const riskReserveMon = borrowedPrincipalMon * (profile.riskReserveBps / 10000);
+    const netEarningsMon = grossEarningsMon - borrowCostMon - riskReserveMon;
+    const endingMon = principalMon + netEarningsMon;
+    const netApyPct = principalMon > 0 ? (netEarningsMon / principalMon) * 100 : 0;
+
+    const earningsInResultUnit = resultUnit === 'USDC'
+        ? netEarningsMon * monPriceUsd
+        : netEarningsMon;
+    const endingInResultUnit = resultUnit === 'USDC'
+        ? endingMon * monPriceUsd
+        : endingMon;
+
+    let rewards = null;
+    if (rewardContext && shmonToMon > 0 && rewardContext.nshmonSupply > 0) {
+        const suppliedShmon = leveragedExposureMon / shmonToMon;
+        const annualDustRewards = (suppliedShmon / rewardContext.nshmonSupply)
+            * rewardContext.emissionPerSecond
+            * rewardContext.annualRewardSeconds;
+        const annualDustRewardsUsd = annualDustRewards * rewardContext.dustPriceUsd;
+
+        rewards = {
+            dust: {
+                estimatedAmount: round(annualDustRewards, 6),
+                estimatedUsd: round(annualDustRewardsUsd, 4),
+                priceUsd: round(rewardContext.dustPriceUsd, 6),
+                annualRewardSeconds: rewardContext.annualRewardSeconds
+            },
+            note: 'DUST rewards are separate from MON/shMON ending balance. veDUST / USDC boost not included.'
+        };
+    }
+
+    return {
+        id: profile.id,
+        name: profile.name,
+        risk: profile.risk,
+        leverage: profile.leverage,
+        assumptions: {
+            borrowApyPct: profile.borrowApy,
+            riskReserveBps: profile.riskReserveBps
+        },
+        grossApyPct: round(principalGrowthApyPct * profile.leverage, 4),
+        netApyPct: round(netApyPct, 4),
+        pnl: {
+            principalMon: round(principalMon, 6),
+            grossEarningsMon: round(grossEarningsMon, 6),
+            borrowCostMon: round(borrowCostMon, 6),
+            riskReserveMon: round(riskReserveMon, 6),
+            netEarningsMon: round(netEarningsMon, 6),
+            endingMon: round(endingMon, 6)
+        },
+        display: {
+            resultUnit,
+            earnings: round(earningsInResultUnit, 4),
+            endingBalance: round(endingInResultUnit, 4)
+        },
+        rewards
     };
 }
 
@@ -838,6 +1059,160 @@ app.get('/api/tokens/strategies', (req, res) => {
         success: true,
         data: tokensConfig.strategies || []
     });
+});
+
+/**
+ * GET /api/strategy/staking/quote
+ * 获取质押策略报价（0x / 1.5x / 1.8x）
+ *
+ * Query params:
+ *   - amount: 输入金额（默认 10000）
+ *   - inputUnit: MON | USDC（默认 MON）
+ *   - resultUnit: MON | USDC（默认 MON）
+ *   - baseApy: shMON 基础 APY（百分比，默认 0）
+ *   - supplyApy: override Neverland same-asset supply APY（百分比，可选）
+ *   - borrowApy15: 1.5x 借款 APY（可选，覆盖默认值）
+ *   - borrowApy18: 1.8x 借款 APY（可选，覆盖默认值）
+ */
+app.get('/api/strategy/staking/quote', async (req, res) => {
+    try {
+        const amount = clampNumber(safeNumber(req.query.amount, 10000), 0, 1e12);
+        const inputUnit = String(req.query.inputUnit || 'MON').toUpperCase() === 'USDC' ? 'USDC' : 'MON';
+        const resultUnit = String(req.query.resultUnit || 'MON').toUpperCase() === 'USDC' ? 'USDC' : 'MON';
+        const baseApyPct = clampNumber(safeNumber(req.query.baseApy, 0), 0, 500);
+
+        const monPriceResult = await getCoinGeckoPrice('monad', 'usd');
+        const monPriceFromApi = monPriceResult?.data?.monad?.usd;
+        const monPriceUsd = clampNumber(
+            safeNumber(req.query.monPriceUsd, safeNumber(monPriceFromApi, 0)),
+            0,
+            1e7
+        );
+
+        if (monPriceUsd <= 0) {
+            return res.status(503).json({
+                success: false,
+                error: 'MON price unavailable',
+                hint: 'Pass monPriceUsd query or ensure /api/price/featured works'
+            });
+        }
+
+        const principalMon = inputUnit === 'USDC'
+            ? amount / monPriceUsd
+            : amount;
+
+        let neverlandSupply = null;
+        let sameAssetSupplyApyPct = 0;
+        let dustIncentiveApyPct = 0;
+        const supplyApyOverride = req.query.supplyApy;
+        if (supplyApyOverride != null) {
+            sameAssetSupplyApyPct = clampNumber(safeNumber(supplyApyOverride, 0), 0, 500);
+        } else {
+            try {
+                neverlandSupply = await getNeverlandShmonSupplyApy();
+                sameAssetSupplyApyPct = clampNumber(safeNumber(neverlandSupply?.baseSupplyApyPct, 0), 0, 500);
+                dustIncentiveApyPct = clampNumber(safeNumber(neverlandSupply?.dustIncentiveApyPct, 0), 0, 500);
+            } catch (error) {
+                console.warn(`⚠️ Neverland supply APY unavailable: ${error.message}`);
+            }
+        }
+
+        const principalGrowthApyPct = ((1 + (baseApyPct / 100)) * (1 + (sameAssetSupplyApyPct / 100)) - 1) * 100;
+        const exchangeRateData = await getExchangeRate();
+        const shmonToMon = clampNumber(safeNumber(exchangeRateData.rate, 0), 0, 1e12);
+        const annualRewardSeconds = neverlandSupply
+            ? Math.min(Math.max(neverlandSupply.distributionEnd - Math.floor(Date.now() / 1000), 0), 31536000)
+            : 0;
+        const rewardContext = neverlandSupply
+            ? {
+                nshmonSupply: neverlandSupply.nshmonSupply,
+                emissionPerSecond: neverlandSupply.emissionPerSecond,
+                dustPriceUsd: neverlandSupply.dustPriceUsd,
+                annualRewardSeconds
+            }
+            : null;
+
+        const profile15 = {
+            ...STRATEGY_PROFILES.leverage_1_5x,
+            borrowApy: clampNumber(
+                safeNumber(req.query.borrowApy15, STRATEGY_PROFILES.leverage_1_5x.borrowApy),
+                0,
+                500
+            )
+        };
+        const profile18 = {
+            ...STRATEGY_PROFILES.leverage_1_8x,
+            borrowApy: clampNumber(
+                safeNumber(req.query.borrowApy18, STRATEGY_PROFILES.leverage_1_8x.borrowApy),
+                0,
+                500
+            )
+        };
+
+        const strategies = {
+            no_leverage: calculateSingleStrategyQuote({
+                principalMon,
+                monPriceUsd,
+                shmonToMon,
+                principalGrowthApyPct,
+                resultUnit,
+                profile: STRATEGY_PROFILES.no_leverage,
+                rewardContext
+            }),
+            leverage_1_5x: calculateSingleStrategyQuote({
+                principalMon,
+                monPriceUsd,
+                shmonToMon,
+                principalGrowthApyPct,
+                resultUnit,
+                profile: profile15,
+                rewardContext
+            }),
+            leverage_1_8x: calculateSingleStrategyQuote({
+                principalMon,
+                monPriceUsd,
+                shmonToMon,
+                principalGrowthApyPct,
+                resultUnit,
+                profile: profile18,
+                rewardContext
+            })
+        };
+
+        res.json({
+            success: true,
+            data: {
+                input: {
+                    amount: round(amount, 6),
+                    inputUnit,
+                    resultUnit,
+                    principalMon: round(principalMon, 6)
+                },
+                market: {
+                    monPriceUsd: round(monPriceUsd, 6),
+                    baseApyPct: round(baseApyPct, 4),
+                    sameAssetSupplyApyPct: round(sameAssetSupplyApyPct, 4),
+                    dustIncentiveApyPct: round(dustIncentiveApyPct, 4),
+                    principalGrowthApyPct: round(principalGrowthApyPct, 4),
+                    shmonToMon: round(shmonToMon, 6),
+                    neverlandSupply: neverlandSupply
+                        ? {
+                            ...neverlandSupply,
+                            annualRewardSeconds
+                        }
+                        : null
+                },
+                strategies
+            },
+            timestamp: Date.now()
+        });
+    } catch (error) {
+        console.error('Strategy quote API error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
 });
 
 // ==================== 启动服务器 ====================
